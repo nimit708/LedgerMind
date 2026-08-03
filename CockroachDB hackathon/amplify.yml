@@ -3,14 +3,14 @@ frontend:
   phases:
     preBuild:
       commands:
-        - cd frontend && npm ci
+        - cd "CockroachDB hackathon/frontend" && npm ci
     build:
       commands:
-        - cd frontend && npm run build
+        - cd "CockroachDB hackathon/frontend" && npm run build
   artifacts:
-    baseDirectory: frontend/dist
+    baseDirectory: CockroachDB hackathon/frontend/dist
     files:
       - '**/*'
   cache:
     paths:
-      - frontend/node_modules/**/*
+      - CockroachDB hackathon/frontend/node_modules/**/*

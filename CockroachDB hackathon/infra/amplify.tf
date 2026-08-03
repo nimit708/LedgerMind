@@ -12,21 +12,22 @@ resource "aws_amplify_app" "frontend" {
   # The repo has "CockroachDB hackathon/frontend" as a subdirectory
   build_spec = <<-EOT
     version: 1
+    appRoot: CockroachDB hackathon/frontend
     frontend:
       phases:
         preBuild:
           commands:
-            - cd "CockroachDB hackathon/frontend" && npm ci
+            - npm ci
         build:
           commands:
-            - cd "CockroachDB hackathon/frontend" && npm run build
+            - npm run build
       artifacts:
-        baseDirectory: CockroachDB hackathon/frontend/dist
+        baseDirectory: dist
         files:
           - '**/*'
       cache:
         paths:
-          - CockroachDB hackathon/frontend/node_modules/**/*
+          - node_modules/**/*
   EOT
 
   # Environment variables for the frontend build

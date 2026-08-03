@@ -13,26 +13,37 @@ import { Layout } from "./components/Layout";
 
 const queryClient = new QueryClient();
 
+function AppContent({ signOut, user }: { signOut?: () => void; user?: any }) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Layout user={user} onSignOut={signOut}>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/agent" element={<AgentChat />} />
+            <Route path="/approvals" element={<Approvals />} />
+            <Route path="/payments" element={<Payments />} />
+            <Route path="/forecast" element={<Forecast />} />
+            <Route path="/audit" element={<Audit />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Layout>
+      </BrowserRouter>
+    </QueryClientProvider>
+  );
+}
+
 function App() {
+  // If Cognito env vars are not set, render without auth
+  const hasAuth = import.meta.env.VITE_COGNITO_USER_POOL_ID && import.meta.env.VITE_COGNITO_CLIENT_ID;
+
+  if (!hasAuth) {
+    return <AppContent />;
+  }
+
   return (
     <Authenticator>
-      {({ signOut, user }) => (
-        <QueryClientProvider client={queryClient}>
-          <BrowserRouter>
-            <Layout user={user} onSignOut={signOut}>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/agent" element={<AgentChat />} />
-                <Route path="/approvals" element={<Approvals />} />
-                <Route path="/payments" element={<Payments />} />
-                <Route path="/forecast" element={<Forecast />} />
-                <Route path="/audit" element={<Audit />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Layout>
-          </BrowserRouter>
-        </QueryClientProvider>
-      )}
+      {({ signOut, user }) => <AppContent signOut={signOut} user={user} />}
     </Authenticator>
   );
 }

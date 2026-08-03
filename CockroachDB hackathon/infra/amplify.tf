@@ -8,25 +8,25 @@ resource "aws_amplify_app" "frontend" {
   # GitHub access token needed — set via variable
   access_token = var.github_access_token
 
-  # Build settings for Vite + React (frontend is in /frontend dir)
+  # Build settings for Vite + React
+  # The repo has "CockroachDB hackathon/frontend" as a subdirectory
   build_spec = <<-EOT
     version: 1
     frontend:
       phases:
         preBuild:
           commands:
-            - cd frontend
-            - npm ci
+            - cd "CockroachDB hackathon/frontend" && npm ci
         build:
           commands:
-            - npm run build
+            - cd "CockroachDB hackathon/frontend" && npm run build
       artifacts:
-        baseDirectory: frontend/dist
+        baseDirectory: CockroachDB hackathon/frontend/dist
         files:
           - '**/*'
       cache:
         paths:
-          - frontend/node_modules/**/*
+          - CockroachDB hackathon/frontend/node_modules/**/*
   EOT
 
   # Environment variables for the frontend build

@@ -5,7 +5,7 @@ Credentials loaded from AWS Secrets Manager via config.
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
-from ..config import get_settings
+from config import get_settings
 
 settings = get_settings()
 DATABASE_URL = settings.database_url or "cockroachdb+asyncpg://root@localhost:26257/ledgermind"

@@ -10,7 +10,7 @@ from jose import jwt, JWTError
 from pydantic import BaseModel
 from typing import Optional
 
-from ..config import get_settings
+from config import get_settings
 
 security = HTTPBearer()
 

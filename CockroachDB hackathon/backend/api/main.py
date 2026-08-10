@@ -11,9 +11,9 @@ from .auth import get_current_user, check_sme_membership
 from .routers import agent_router, payments_router, dashboard_router, approvals_router
 from .routers import campaign_router, audit_router, forecast_router, demo_router
 from .database import init_db, close_db
-from ..ingestion.csv_import import router as csv_router
-from ..ingestion.stripe_webhook import router as stripe_webhook_router
-from ..ingestion.synthetic_data import router as synthetic_data_router
+from ingestion.csv_import import router as csv_router
+from ingestion.stripe_webhook import router as stripe_webhook_router
+from ingestion.synthetic_data import router as synthetic_data_router
 
 
 @asynccontextmanager

@@ -38,13 +38,7 @@ resource "aws_amplify_app" "frontend" {
     VITE_COGNITO_REGION       = var.aws_region
   }
 
-  # SPA rewrite rule
-  custom_rule {
-    source = "/<*>"
-    target = "/index.html"
-    status = "200"
-  }
-
+  # SPA rewrite rule — only rewrite non-file paths to index.html
   custom_rule {
     source = "</^[^.]+$|\\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json)$)([^.]+$)/>"
     target = "/index.html"

@@ -41,7 +41,10 @@ function App() {
   }
 
   return (
-    <Authenticator>
+    <Authenticator
+      signUpAttributes={["email"]}
+      loginMechanisms={["email"]}
+    >
       {({ signOut, user }) => <AppContent signOut={signOut} user={user} />}
     </Authenticator>
   );

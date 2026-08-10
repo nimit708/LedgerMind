@@ -14,6 +14,10 @@ if (userPoolId && clientId) {
       Cognito: {
         userPoolId,
         userPoolClientId: clientId,
+        loginWith: {
+          email: true,
+        },
+        signUpVerificationMethod: "code",
       },
     },
   });

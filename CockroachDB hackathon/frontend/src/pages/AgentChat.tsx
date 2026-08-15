@@ -98,10 +98,22 @@ export function AgentChat() {
                 <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
                   <p className="text-sm text-amber-800 font-medium">⚠️ This action requires your approval</p>
                   <div className="flex gap-2 mt-2">
-                    <button className="px-4 py-1.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition">
+                    <button
+                      onClick={() => {
+                        setMessages((prev) => [...prev, { role: "user", content: "✅ Approved", timestamp: new Date() }]);
+                        chatMutation.mutate("I approve this action. Please proceed.");
+                      }}
+                      className="px-4 py-1.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition cursor-pointer"
+                    >
                       Approve
                     </button>
-                    <button className="px-4 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition">
+                    <button
+                      onClick={() => {
+                        setMessages((prev) => [...prev, { role: "user", content: "❌ Rejected", timestamp: new Date() }]);
+                        chatMutation.mutate("I reject this action. Do not proceed.");
+                      }}
+                      className="px-4 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition cursor-pointer"
+                    >
                       Reject
                     </button>
                   </div>

@@ -45,6 +45,19 @@ function App() {
       signUpAttributes={["email"]}
       loginMechanisms={["email"]}
       hideSignUp={false}
+      services={{
+        // Override to skip the "verify user" step after login
+        async handleAutoSignIn() {
+          return {} as any;
+        },
+      }}
+      formFields={{
+        signUp: {
+          email: { order: 1 },
+          password: { order: 2 },
+          confirm_password: { order: 3 },
+        },
+      }}
     >
       {({ signOut, user }) => <AppContent signOut={signOut} user={user} />}
     </Authenticator>

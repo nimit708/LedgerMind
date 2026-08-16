@@ -17,7 +17,6 @@ if (userPoolId && clientId) {
         loginWith: {
           email: true,
         },
-        signUpVerificationMethod: "code",
       },
     },
   });

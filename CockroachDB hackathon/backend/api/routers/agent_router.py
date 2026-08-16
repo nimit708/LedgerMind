@@ -257,13 +257,15 @@ async def agent_chat(request: AgentChatRequest, user: CurrentUser = Depends(get_
     except Exception as e:
         response = f"I'm connected but encountered a DB query issue: {str(e)[:100]}. The CockroachDB connection is active — try asking about failures, revenue, or customers."
 
-    # Store this interaction in CockroachDB agent_memory using vector indexing
-    # This enables semantic retrieval of past conversations
+    # Store interaction + create pending approval if needed
+    requires_approval = "approval" in response.lower()
     try:
         async with async_session() as mem_session:
             sme_row = await mem_session.execute(text("SELECT id FROM smes LIMIT 1"))
             sme = sme_row.fetchone()
             if sme:
+                sme_id = str(sme[0])
+                # Store in agent_memory
                 memory_content = json.dumps({
                     "user_message": request.message,
                     "agent_response_summary": response[:200],
@@ -274,8 +276,46 @@ async def agent_chat(request: AgentChatRequest, user: CurrentUser = Depends(get_
                         INSERT INTO agent_memory (id, sme_id, memory_type, content, created_at)
                         VALUES (:id, :sme_id, 'observation', :content::jsonb, now())
                     """),
-                    {"id": str(uuid.uuid4()), "sme_id": str(sme[0]), "content": memory_content}
+                    {"id": str(uuid.uuid4()), "sme_id": sme_id, "content": memory_content}
                 )
+
+                # If response requires approval, insert a pending decision
+                if requires_approval:
+                    # Determine task type from the message
+                    if "recovery" in msg or "campaign" in msg:
+                        task_type = "recovery_campaign"
+                        observation = f"Detected payment failures requiring recovery action"
+                    elif "failure" in msg or "spike" in msg:
+                        task_type = "investigate_failure"
+                        observation = f"Payment failure spike detected, campaign recommended"
+                    elif "customer" in msg or "inactive" in msg:
+                        task_type = "win_back_campaign"
+                        observation = f"Inactive customers identified for win-back outreach"
+                    else:
+                        task_type = "agent_recommendation"
+                        observation = f"Agent recommended action based on: {request.message[:100]}"
+
+                    # Extract the proposed action from response (after "Proposed" keyword or last paragraph)
+                    proposed_action = response.split("**Proposed")[-1][:300] if "**Proposed" in response else response[-300:]
+
+                    await mem_session.execute(
+                        text("""
+                            INSERT INTO agent_decisions 
+                            (id, sme_id, task_type, observation, analysis, recommendation, 
+                             confidence, risk_level, approval_status, created_at)
+                            VALUES (:id, :sme_id, :task_type, :observation, :analysis, :recommendation,
+                                    0.85, 'medium', 'pending', now())
+                        """),
+                        {
+                            "id": str(uuid.uuid4()),
+                            "sme_id": sme_id,
+                            "task_type": task_type,
+                            "observation": observation,
+                            "analysis": response[:500],
+                            "recommendation": proposed_action,
+                        }
+                    )
+
                 await mem_session.commit()
     except Exception:
         pass  # Non-critical — don't fail the response
@@ -283,7 +323,7 @@ async def agent_chat(request: AgentChatRequest, user: CurrentUser = Depends(get_
     return {
         "conversation_id": request.conversation_id or str(uuid.uuid4()),
         "response": response,
-        "requires_approval": "approval" in response.lower(),
+        "requires_approval": requires_approval,
     }
 
 

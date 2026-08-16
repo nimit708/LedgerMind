@@ -7,7 +7,14 @@ export function Approvals() {
   const { data, isLoading } = useQuery({
     queryKey: ["pending-approvals"],
     queryFn: () => api.get("/api/v1/approvals/pending").then((r) => r.data),
-    refetchInterval: 10000,
+    refetchInterval: 5000,
+    retry: false,
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ["approval-stats"],
+    queryFn: () => api.get("/api/v1/approvals/stats").then((r) => r.data),
+    refetchInterval: 5000,
     retry: false,
   });
 
@@ -16,6 +23,7 @@ export function Approvals() {
       api.post(`/api/v1/approvals/${id}/decide`, { status, reason }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pending-approvals"] });
+      queryClient.invalidateQueries({ queryKey: ["approval-stats"] });
     },
   });
 
@@ -33,15 +41,15 @@ export function Approvals() {
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
           <p className="text-sm text-slate-500">Pending</p>
-          <p className="text-2xl font-bold text-amber-600 mt-1">{data?.approvals?.length ?? 0}</p>
+          <p className="text-2xl font-bold text-amber-600 mt-1">{stats?.pending ?? data?.approvals?.length ?? 0}</p>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
           <p className="text-sm text-slate-500">Approved Today</p>
-          <p className="text-2xl font-bold text-emerald-600 mt-1">12</p>
+          <p className="text-2xl font-bold text-emerald-600 mt-1">{stats?.approved_today ?? 0}</p>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
           <p className="text-sm text-slate-500">Rejected Today</p>
-          <p className="text-2xl font-bold text-red-600 mt-1">1</p>
+          <p className="text-2xl font-bold text-red-600 mt-1">{stats?.rejected_today ?? 0}</p>
         </div>
       </div>
 

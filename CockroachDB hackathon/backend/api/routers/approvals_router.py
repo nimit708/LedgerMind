@@ -1,79 +1,74 @@
-"""
-Approvals router — human-in-the-loop approval system.
-SME approves consequential actions before they are executed.
-"""
-
+"""Approvals router — pending agent decisions from CockroachDB."""
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from typing import Optional
-from enum import Enum
-
+from sqlalchemy import text
 from ..auth import CurrentUser, get_current_user
+from ..database import async_session
 
 router = APIRouter()
 
 
-class ApprovalStatus(str, Enum):
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-    EXPIRED = "expired"
-
-
-class ApprovalDecision(BaseModel):
-    status: ApprovalStatus
-    reason: Optional[str] = None
-    modified_parameters: Optional[dict] = None
+@router.get("/stats")
+async def get_approval_stats(user: CurrentUser = Depends(get_current_user)):
+    """Get approval stats — pending, approved today, rejected today."""
+    try:
+        async with async_session() as session:
+            r = await session.execute(text(
+                "SELECT "
+                "COUNT(*) FILTER (WHERE approval_status = 'pending') as pending, "
+                "COUNT(*) FILTER (WHERE approval_status = 'approved' AND approved_at > now() - interval '24 hours') as approved_today, "
+                "COUNT(*) FILTER (WHERE approval_status = 'rejected' AND approved_at > now() - interval '24 hours') as rejected_today "
+                "FROM agent_decisions"
+            ))
+            row = r.fetchone()
+            return {
+                "pending": row[0],
+                "approved_today": row[1],
+                "rejected_today": row[2],
+            }
+    except Exception as e:
+        return {"pending": 0, "approved_today": 0, "rejected_today": 0, "_db_error": str(e)}
 
 
 @router.get("/pending")
-async def get_pending_approvals(
-    user: CurrentUser = Depends(get_current_user),
-):
-    """
-    Get all actions pending SME approval.
-    These are consequential actions the agent wants to take.
-    """
-    # TODO: Query pending approvals from CockroachDB
-    return {
-        "approvals": [],
-        "total": 0,
-    }
+async def get_pending_approvals(user: CurrentUser = Depends(get_current_user)):
+    try:
+        async with async_session() as session:
+            r = await session.execute(text(
+                "SELECT id, task_type, observation, analysis, recommendation, confidence, risk_level, created_at "
+                "FROM agent_decisions WHERE approval_status = 'pending' ORDER BY created_at DESC"
+            ))
+            approvals = [
+                {
+                    "id": str(row[0]),
+                    "task_type": row[1],
+                    "summary": row[2][:100],
+                    "explanation": row[3],
+                    "proposed_action": row[4],
+                    "confidence": row[5],
+                    "risk_level": row[6],
+                    "created_at": row[7].isoformat(),
+                }
+                for row in r.fetchall()
+            ]
+            return {"approvals": approvals}
+    except Exception as e:
+        return {"approvals": [], "_db_error": str(e)}
+
+
+class DecisionRequest(BaseModel):
+    status: str
+    reason: str = None
 
 
 @router.post("/{approval_id}/decide")
-async def decide_approval(
-    approval_id: str,
-    decision: ApprovalDecision,
-    user: CurrentUser = Depends(get_current_user),
-):
-    """
-    Approve or reject an agent-proposed action.
-    If approved, the agent will execute the action and monitor outcomes.
-    If rejected, the agent stores the decision for future learning.
-    """
-    # TODO: Update approval status, trigger agent execution if approved
-    return {
-        "approval_id": approval_id,
-        "status": decision.status,
-        "message": f"Action {decision.status.value}. Agent will {'execute and monitor outcome' if decision.status == ApprovalStatus.APPROVED else 'record this for future learning'}.",
-    }
-
-
-@router.get("/history")
-async def get_approval_history(
-    user: CurrentUser = Depends(get_current_user),
-    limit: int = 50,
-    offset: int = 0,
-):
-    """
-    Get history of past approval decisions and their outcomes.
-    The agent uses these outcomes to improve future recommendations.
-    """
-    # TODO: Query approval history with outcomes from CockroachDB
-    return {
-        "approvals": [],
-        "total": 0,
-        "limit": limit,
-        "offset": offset,
-    }
+async def decide_approval(approval_id: str, request: DecisionRequest, user: CurrentUser = Depends(get_current_user)):
+    try:
+        async with async_session() as session:
+            await session.execute(text(
+                "UPDATE agent_decisions SET approval_status = :status, approved_at = now() WHERE id = :id"
+            ), {"status": request.status, "id": approval_id})
+            await session.commit()
+            return {"status": "ok", "approval_id": approval_id, "decision": request.status}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}

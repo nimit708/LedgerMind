@@ -44,6 +44,7 @@ function App() {
     <Authenticator
       signUpAttributes={["email"]}
       loginMechanisms={["email"]}
+      hideSignUp={false}
     >
       {({ signOut, user }) => <AppContent signOut={signOut} user={user} />}
     </Authenticator>

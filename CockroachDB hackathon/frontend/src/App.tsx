@@ -1,7 +1,8 @@
-import { Authenticator } from "@aws-amplify/ui-react";
+import { Authenticator, useAuthenticator } from "@aws-amplify/ui-react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@aws-amplify/ui-react/styles.css";
+import { useEffect } from "react";
 
 import { Dashboard } from "./pages/Dashboard";
 import { AgentChat } from "./pages/AgentChat";
@@ -33,6 +34,15 @@ function AppContent({ signOut, user }: { signOut?: () => void; user?: any }) {
   );
 }
 
+// Component that auto-skips the verify/confirm step
+function AutoSkipVerify() {
+  const { skipVerification } = useAuthenticator();
+  useEffect(() => {
+    skipVerification();
+  }, []);
+  return <div className="p-8 text-center text-slate-500">Signing you in...</div>;
+}
+
 function App() {
   const hasAuth = import.meta.env.VITE_COGNITO_USER_POOL_ID && import.meta.env.VITE_COGNITO_CLIENT_ID;
 
@@ -45,18 +55,9 @@ function App() {
       signUpAttributes={["email"]}
       loginMechanisms={["email"]}
       hideSignUp={false}
-      services={{
-        // Override to skip the "verify user" step after login
-        async handleAutoSignIn() {
-          return {} as any;
-        },
-      }}
-      formFields={{
-        signUp: {
-          email: { order: 1 },
-          password: { order: 2 },
-          confirm_password: { order: 3 },
-        },
+      components={{
+        VerifyUser: AutoSkipVerify,
+        ConfirmVerifyUser: AutoSkipVerify,
       }}
     >
       {({ signOut, user }) => <AppContent signOut={signOut} user={user} />}
